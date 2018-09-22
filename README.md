@@ -81,7 +81,9 @@ INSTALLATION INSTRUCTIONS
 
 
 USAGE
+
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 Once you have copied these files into your Zen Cart installation,
 you should see a new menu item "Uploads" in the "Customers" menu of
 your administrative area.
@@ -103,24 +105,32 @@ pruned for optimal perfomance.
 
 
 INFORMATION
+
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 Core file Edits: admin/includes/configure.php add code only.
 Database Changes: None
 
 
 UNINSTALL
+
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 Simply remove the package files and edits for a full uninstall.
 
 
 SUPPORT
+
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 Please use Zen Cart forum support thread located here
 http://www.zen-cart.com/forum/showthread.php?t=159940
 
 
 VERSION HISTORY
+
 ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
+
 Dana Cartwright (ZC forums: decartwr, e-mail: zen@dobbytron.com)
 
 5/25/2011 Updated & Reformatted by PRO-Webs.net
