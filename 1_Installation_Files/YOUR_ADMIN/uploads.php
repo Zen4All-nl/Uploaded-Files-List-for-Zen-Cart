@@ -226,7 +226,7 @@ function download_file($index, $oid) {
     default:
       die('File extension "' . $file_extension . '" not understood (line ' . __LINE__ . ')');
   }
-  $fs_path = DIR_FS_UPLOADS . $index . '.' . $file_extension;
+  $fs_path = DIR_FS_CATALOG_IMAGES . 'uploads/' . $index . '.' . $file_extension;
   if (!file_exists($fs_path))
     die('File "' . $fs_path . '" does not exist (' . __LINE__ . ')');
 //	We make a download file name consisting of the characters "zc" followed
