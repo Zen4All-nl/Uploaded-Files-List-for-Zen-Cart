@@ -19,3 +19,5 @@
 // +----------------------------------------------------------------------+
 //
 define('FILENAME_UPLOADS', 'uploads');
+define('DIR_WS_UPLOADS', DIR_WS_IMAGES . 'uploads/');
+define('DIR_FS_UPLOADS', DIR_FS_CATALOG . DIR_WS_UPLOADS );
