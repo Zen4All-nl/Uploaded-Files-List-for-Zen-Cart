@@ -1,4 +1,3 @@
-# Uploaded-Files-List
 Customer Uploaded Files - List and Download v 1.4
 Version Release Date: 9/26/2018
 Publisher: Zen4All
