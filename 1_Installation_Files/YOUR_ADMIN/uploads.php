@@ -21,55 +21,129 @@
 // +----------------------------------------------------------------------+
 //
 
-/*
-  This module keys on finding a Product Option with the name "File", and then finding all orders
-  that contain products that have an attribute corresponding to the File product option.  This works
-  for an out-of-the-box Zen Cart installation, but there are various ways a store could be set
-  up that would break this code.  And it's a roundabout and painful way to dig up the info.
-
-  The proper solution would involve changing the core code.  A good fix would be to
-  record the products_attributes_id value from the products_attributes table into a
-  field in the files_uploaded table.  That would provide a direct and simple link tying
-  the uploaded file to a specific attribute of a specific product within a specific order.
-  Since there isn't any reason to record the customers_id in the files_uploaded table, that field
-  would be better used to record the products_attributes_id.
-
-  Revision History
-
-  V1.01 (9/14/2010) added  onload="init()"  to the <body> statement.  This fixes a small
-  mis-alignment in the CSS menu hovers, and a stray line that appears while hovering.
-
- */
 require 'includes/application_top.php';
+
+//  Download the user's uploaded file corresponding to $index.
+//  A visitor cannot arrive here unless they are validly logged
+//  in as the admin, so only the admin of the store should be able
+//  to download a file via this mechanism.
+function download_file($index, $oid) {
+
+//  Look up in the database of upload files, that
+//  gives us the original filename the user used.
+//  We care about that only to the extent that it
+//  gives us an extension, from which we deduce
+//  the file type.  We *could* arrange to name the
+//  downloaded file per the user's original name,
+//  but that is not likely to be helpful to us on
+//  the receiving end (who knows what wacky naming
+//  convention the user uses?).  Instead, we adopt a uniform
+//  naming convention that incorporates the original
+//  order ID.  Note: index has already been sanitized.
+  $query = "SELECT *
+            FROM " . TABLE_FILES_UPLOADED . "
+            WHERE files_uploaded_id = " . (int)$index;
+  $file = $db->Execute($query);
+  if ($file->RecordCount() != 1) {
+//  $index has been sanitized and so is safe to echo here.
+    die('unknown upload index=' . (int)$index . ' (' . __LINE__ . ')');
+  }
+  $fileName = $file->fields['files_uploaded_name'];
+  $file_extension = strtolower(substr(strrchr($fileName, '.'), 1));
+  switch ($file_extension) {
+    case 'csv':
+      $content = 'text/csv';
+      break;
+    case 'zip':
+      $content = 'application/zip';
+      break;
+    case 'jpg':
+      $content = 'image/jpeg';
+      break;
+    case 'jpeg':
+      $content = 'image/jpeg';
+      break;
+    case 'gif':
+      $content = 'image/gif';
+      break;
+    case 'png':
+      $content = 'image/png';
+      break;
+    case 'eps':
+      $content = 'application/postscript';
+      break;
+    case 'cdr':
+      $content = 'application/cdr';
+      break;  //  CorelDRAW
+    case 'ai':
+      $content = 'application/postscript';
+      break;
+    case 'pdf':
+      $content = 'application/pdf';
+      break;
+    case 'tif':
+      $content = 'image/tiff';
+      break;
+    case 'tiff':
+      $content = 'image/tiff';
+      break;
+    case 'bmp':
+      $content = 'image/bmp';
+      break;
+    case 'xls':
+      $content = 'application/vnd.ms-excel';
+      break;
+    case 'numbers':
+      $content = 'application/vnd.ms-excel';
+      break;
+    default:
+      die('File extension "' . $file_extension . '" not understood (line ' . __LINE__ . ')');
+  }
+  $fs_path = DIR_FS_CATALOG_IMAGES . 'uploads/' . $index . '.' . $file_extension;
+  if (!file_exists($fs_path))
+    die('File "' . $fs_path . '" does not exist (' . __LINE__ . ')');
+//  We make a download file name consisting of the characters "zc" followed
+//  by the order ID followed by the file index, using "_" as a separator.
+//  This makes the file names easily recognized on the receiving computer,
+//  and lets the admin know what order the file came from.  Note: $oid is sanitized.
+  $nfile = 'zc_order' . $oid . '_' . $index . '.' . $file_extension;
+  header('Content-type: ' . $content);
+  header('Content-Disposition: attachment; filename="' . $nfile . '"');
+  header('Content-Transfer-Encoding: binary');
+  header('Cache-Control: no-cache, must-revalidate');
+  header('Expires: Sat, 26 Jul 1997 05:00:00 GMT');
+  readfile($fs_path);
+}
 
 define('MAX_DISPLAY_SEARCH_RESULTS_UPLOADS', 25);
 
 $get = (isset($_GET['get']) ? (int)$_GET['get'] : '');
 $oid = (isset($_GET['oid']) ? (int)$_GET['oid'] : '');
 
-//	If the URL points to a specific file to download,
-//	go do that now and abandon further processing.
+//  If the URL points to a specific file to download,
+//  go do that now and abandon further processing.
 if (zen_not_null($get)) {
   download_file($get, $oid);
   exit;
 }
 
-//	Find the products_option_id corresponding to a customer uploaded file.
+//  Find the products_option_id corresponding to a customer uploaded file.
 $query_opt = "SELECT products_options_types_id AS optid
               FROM " . TABLE_PRODUCTS_OPTIONS_TYPES . "
               WHERE products_options_types_name = '" . PRODUCTS_OPTIONS_TYPES_NAME . "'";
 $opts = $db->Execute($query_opt);
 if ($opts->RecordCount() != 1)
-//	If you get to thie die statement, you probably have something mis-configured.
-//	You don't have a product option of type "File" which is unusual (although it's
-//	not technically wrong, it's certainly unusual).  Or, you set the value of
-//	PRODUCTS_OPTIONS_TYPES_NAME to something other than "File".
-die('Cannot find a product option of type "' . PRODUCTS_OPTIONS_TYPES_NAME . '" (' . __LINE__ . ')');
+//  If you get to thie die statement, you probably have something mis-configured.
+//  You don't have a product option of type "File" which is unusual (although it's
+//  not technically wrong, it's certainly unusual).  Or, you set the value of
+//  PRODUCTS_OPTIONS_TYPES_NAME to something other than "File".
+  die('Cannot find a product option of type "' . PRODUCTS_OPTIONS_TYPES_NAME . '" (' . __LINE__ . ')');
 $optid = $opts->fields['optid'];
 
-//	Determine which page we are displaying, build display list.
-$offset = ($page - 1) * MAX_DISPLAY_SEARCH_RESULTS_UPLOADS;
-$query_files = "SELECT opa.products_options_values AS fname, opa.orders_id AS oid, tor.customers_name AS cname
+//  Determine which page we are displaying, build display list.
+$query_files = "SELECT opa.products_options_values AS fname,
+                       opa.orders_id AS oid,
+                       tor.customers_name AS cname
                 FROM " . TABLE_ORDERS_PRODUCTS_ATTRIBUTES . " AS opa
                 LEFT JOIN " . TABLE_PRODUCTS_OPTIONS . " AS po ON po.products_options_id = opa.products_options_id
                 LEFT JOIN " . TABLE_ORDERS . " AS tor ON opa.orders_id = tor.orders_id
@@ -82,8 +156,8 @@ $tolist = array();
 
 foreach ($files as $file) {
   $oid = $file['oid'];
-//	The file ID and NAME are combined within the products_options_values field
-//	in the TABLE_ORDERS_PRODUCTS_ATTRIBUTES table.  So we have to parse that out.
+//  The file ID and NAME are combined within the products_options_values field
+//  in the TABLE_ORDERS_PRODUCTS_ATTRIBUTES table.  So we have to parse that out.
   $opt = $file['fname'];
   $m = preg_match('/^([0-9]+)\.\s*(.*)$/', $opt, $matches);
   if (count($matches) == 3) {
@@ -127,119 +201,45 @@ foreach ($files as $file) {
     </script>
   </head>
   <body onload="init()">
-<?php require(DIR_WS_INCLUDES . 'header.php'); ?>
-    <h1><?php echo HEADING_TITLE; ?></h1>
+      <?php require(DIR_WS_INCLUDES . 'header.php'); ?>
     <div class="container-fluid">
+      <h1><?php echo HEADING_TITLE; ?></h1>
       <table class="table table-striped">
-        <tr class="dataTableHeadingRow">
-          <td class="dataTableHeadingContent"><?php echo TABLE_HEADING_ORDER_ID; ?></td>
-          <td class="dataTableHeadingContent"><?php echo TABLE_HEADING_NAME; ?></td>
-          <td class="dataTableHeadingContent"><?php echo TABLE_HEADING_DOWNLOAD; ?></td>
-          <td class="dataTableHeadingContent"><?php echo TABLE_HEADING_FILE; ?></td>
-          <td class="dataTableHeadingContent"><?php echo TABLE_HEADING_ID; ?></td>
-        </tr>
-        <?php
-        foreach ($tolist as $d) {
-          ?>
-          <tr>
-            <td class="dataTableContent"><?php echo $d['oid']; ?></td>
-            <td class="dataTableContent"><?php echo $d['cname']; ?></td>
-            <td class="dataTableContent"><?php echo $d['link']; ?></td>
-            <td class="dataTableContent"><?php echo $d['fname']; ?></td>
-            <td class="dataTableContent"><?php echo $d['upid']; ?></td>
+        <thead>
+          <tr class="dataTableHeadingRow">
+            <th class="dataTableHeadingContent"><?php echo TABLE_HEADING_ORDER_ID; ?></th>
+            <th class="dataTableHeadingContent"><?php echo TABLE_HEADING_NAME; ?></th>
+            <th class="dataTableHeadingContent"><?php echo TABLE_HEADING_DOWNLOAD; ?></th>
+            <th class="dataTableHeadingContent"><?php echo TABLE_HEADING_FILE; ?></th>
+            <th class="dataTableHeadingContent"><?php echo TABLE_HEADING_ID; ?></th>
           </tr>
-          <?php
-        }
-        ?>
-
+        </thead>
+        <tbody>
+            <?php
+            foreach ($tolist as $d) {
+              ?>
+            <tr>
+              <td class="dataTableContent"><?php echo $d['oid']; ?></td>
+              <td class="dataTableContent"><?php echo $d['cname']; ?></td>
+              <td class="dataTableContent"><?php echo $d['link']; ?></td>
+              <td class="dataTableContent"><?php echo $d['fname']; ?></td>
+              <td class="dataTableContent"><?php echo $d['upid']; ?></td>
+            </tr>
+            <?php
+          }
+          ?>
+        </tbody>
       </table>
       <div class="row">
         <table class="table">
           <tr>
-            <td class="smallText" valign="top"><?php echo $splitter->display_count($files_query_numrows, MAX_DISPLAY_SEARCH_RESULTS_UPLOADS, $_GET['page'], TEXT_DISPLAY_NUMBER_OF_UPLOADS); ?></td>
-            <td class="smallText"><?php echo $splitter->display_links($files_query_numrows, MAX_DISPLAY_SEARCH_RESULTS_UPLOADS, MAX_DISPLAY_PAGE_LINKS, $_GET['page'], zen_get_all_get_params(array('page'))); ?></td>
+            <td><?php echo $splitter->display_count($files_query_numrows, MAX_DISPLAY_SEARCH_RESULTS, $_GET['page'], TEXT_DISPLAY_NUMBER_OF_UPLOADS); ?></td>
+            <td><?php echo $splitter->display_links($files_query_numrows, MAX_DISPLAY_SEARCH_RESULTS, MAX_DISPLAY_PAGE_LINKS, $_GET['page'], zen_get_all_get_params(array('page'))); ?></td>
           </tr>
         </table>
       </div>
     </div>
-<?php require DIR_WS_INCLUDES . 'footer.php'; ?>
+    <?php require DIR_WS_INCLUDES . 'footer.php'; ?>
   </body>
 </html>
 <?php require DIR_WS_INCLUDES . 'application_bottom.php'; ?>
-<?php
-
-//	Download the user's uploaded file corresponding to $index.
-//	A visitor cannot arrive here unless they are validly logged
-//	in as the admin, so only the admin of the store should be able
-//	to download a file via this mechanism.
-function download_file($index, $oid) {
-  global $db;
-//	Look up in the database of upload files, that
-//	gives us the original filename the user used.
-//	We care about that only to the extent that it
-//	gives us an extension, from which we deduce
-//	the file type.  We *could* arrange to name the
-//	downloaded file per the user's original name,
-//	but that is not likely to be helpful to us on
-//	the receiving end (who knows what wacky naming
-//	convention the user uses?).  Instead, we adopt a uniform
-//	naming convention that incorporates the original
-//	order ID.  Note: index has already been sanitized.
-  $query = 'SELECT * FROM ' . TABLE_FILES_UPLOADED . ' WHERE `files_uploaded_id`="' . $index . '"';
-  $file = $db->Execute($query);
-  if ($file->RecordCount() != 1)
-//	$index has been sanitized and so is safe to echo here.
-    die('unknown upload index=' . $index . ' (' . __LINE__ . ')');
-  $fileName = $file->fields['files_uploaded_name'];
-  $file_extension = strtolower(substr(strrchr($fileName, '.'), 1));
-  switch ($file_extension) {
-    case 'csv': $content = 'text/csv';
-      break;
-    case 'zip': $content = 'application/zip';
-      break;
-    case 'jpg': $content = 'image/jpeg';
-      break;
-    case 'jpeg': $content = 'image/jpeg';
-      break;
-    case 'gif': $content = 'image/gif';
-      break;
-    case 'png': $content = 'image/png';
-      break;
-    case 'eps': $content = 'application/postscript';
-      break;
-    case 'cdr': $content = 'application/cdr';
-      break;  //	CorelDRAW
-    case 'ai': $content = 'application/postscript';
-      break;
-    case 'pdf': $content = 'application/pdf';
-      break;
-    case 'tif': $content = 'image/tiff';
-      break;
-    case 'tiff': $content = 'image/tiff';
-      break;
-    case 'bmp': $content = 'image/bmp';
-      break;
-    case 'xls': $content = 'application/vnd.ms-excel';
-      break;
-    case 'numbers': $content = 'application/vnd.ms-excel';
-      break;
-    default:
-      die('File extension "' . $file_extension . '" not understood (line ' . __LINE__ . ')');
-  }
-  $fs_path = DIR_FS_CATALOG_IMAGES . 'uploads/' . $index . '.' . $file_extension;
-  if (!file_exists($fs_path))
-    die('File "' . $fs_path . '" does not exist (' . __LINE__ . ')');
-//	We make a download file name consisting of the characters "zc" followed
-//	by the order ID followed by the file index, using "_" as a separator.
-//	This makes the file names easily recognized on the receiving computer,
-//	and lets the admin know what order the file came from.  Note: $oid is sanitized.
-  $nfile = 'zc_order' . $oid . '_' . $index . '.' . $file_extension;
-  header('Content-type: ' . $content);
-  header('Content-Disposition: attachment; filename="' . $nfile . '"');
-  header('Content-Transfer-Encoding: binary');
-  header('Cache-Control: no-cache, must-revalidate');
-  header('Expires: Sat, 26 Jul 1997 05:00:00 GMT');
-  readfile($fs_path);
-}
-
-//	Ending PHP tag deliberately omitted.
