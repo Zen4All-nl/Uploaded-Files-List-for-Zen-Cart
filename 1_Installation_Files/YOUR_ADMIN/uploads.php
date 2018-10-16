@@ -49,7 +49,7 @@ function download_file($index, $oid) {
     die('unknown upload index=' . (int)$index . ' (' . __LINE__ . ')');
   }
   $fileName = $file->fields['files_uploaded_name'];
-  $file_extension = strtolower(substr(strrchr($fileName, '.'), 1));
+  $file_extension = strtolower($fext = substr(strrchr($fileName, '.'), 1));
   switch ($file_extension) {
     case 'csv':
       $content = 'text/csv';
@@ -99,14 +99,14 @@ function download_file($index, $oid) {
     default:
       die('File extension "' . $file_extension . '" not understood (line ' . __LINE__ . ')');
   }
-  $fs_path = DIR_FS_CATALOG_IMAGES . 'uploads/' . $index . '.' . $file_extension;
+  $fs_path = DIR_FS_CATALOG_IMAGES . 'uploads/' . $index . '.' . $fext;
   if (!file_exists($fs_path))
     die('File "' . $fs_path . '" does not exist (' . __LINE__ . ')');
 //  We make a download file name consisting of the characters "zc" followed
 //  by the order ID followed by the file index, using "_" as a separator.
 //  This makes the file names easily recognized on the receiving computer,
 //  and lets the admin know what order the file came from.  Note: $oid is sanitized.
-  $nfile = 'zc_order' . $oid . '_' . $index . '.' . $file_extension;
+  $nfile = 'zc_order' . $oid . '_' . $index . '.' . $fext;
   header('Content-type: ' . $content);
   header('Content-Disposition: attachment; filename="' . $nfile . '"');
   header('Content-Transfer-Encoding: binary');
@@ -114,8 +114,6 @@ function download_file($index, $oid) {
   header('Expires: Sat, 26 Jul 1997 05:00:00 GMT');
   readfile($fs_path);
 }
-
-define('MAX_DISPLAY_SEARCH_RESULTS_UPLOADS', 25);
 
 $get = (isset($_GET['get']) ? (int)$_GET['get'] : '');
 $oid = (isset($_GET['oid']) ? (int)$_GET['oid'] : '');
@@ -147,12 +145,12 @@ $query_files = "SELECT opa.products_options_values AS fname,
                 FROM " . TABLE_ORDERS_PRODUCTS_ATTRIBUTES . " AS opa
                 LEFT JOIN " . TABLE_PRODUCTS_OPTIONS . " AS po ON po.products_options_id = opa.products_options_id
                 LEFT JOIN " . TABLE_ORDERS . " AS tor ON opa.orders_id = tor.orders_id
-                WHERE po.products_options_type = " . $optid . "
+                WHERE po.products_options_type = " . (int)$optid . "
                 ORDER BY opa.orders_id DESC";
 
-$splitter = new splitPageResults($_GET['page'], MAX_DISPLAY_SEARCH_RESULTS_UPLOADS, $query_files, $files_query_numrows);
+$splitter = new splitPageResults($_GET['page'], MAX_DISPLAY_SEARCH_RESULTS, $query_files, $files_query_numrows);
 $files = $db->Execute($query_files);
-$tolist = array();
+$filesArray = array();
 
 foreach ($files as $file) {
   $oid = $file['oid'];
@@ -171,7 +169,7 @@ foreach ($files as $file) {
     $status = false;
     $link = '';
   }
-  $tolist[] = array(
+  $filesArray[] = array(
     'cname' => $file['cname'],
     'oid' => $file['oid'],
     'fname' => $fname,
@@ -216,7 +214,7 @@ foreach ($files as $file) {
         </thead>
         <tbody>
             <?php
-            foreach ($tolist as $d) {
+            foreach ($filesArray as $d) {
               ?>
             <tr>
               <td class="dataTableContent"><?php echo $d['oid']; ?></td>
