@@ -22,7 +22,7 @@
 //
 
 require 'includes/application_top.php';
-
+  global $db;
 //  Download the user's uploaded file corresponding to $index.
 //  A visitor cannot arrive here unless they are validly logged
 //  in as the admin, so only the admin of the store should be able
@@ -146,6 +146,7 @@ $query_files = "SELECT opa.products_options_values AS fname,
                 LEFT JOIN " . TABLE_PRODUCTS_OPTIONS . " AS po ON po.products_options_id = opa.products_options_id
                 LEFT JOIN " . TABLE_ORDERS . " AS tor ON opa.orders_id = tor.orders_id
                 WHERE po.products_options_type = " . (int)$optid . "
+                AND po.language_id = " . (int)$_SESSION['languages_id'] . "
                 ORDER BY opa.orders_id DESC";
 
 $splitter = new splitPageResults($_GET['page'], MAX_DISPLAY_SEARCH_RESULTS, $query_files, $files_query_numrows);
