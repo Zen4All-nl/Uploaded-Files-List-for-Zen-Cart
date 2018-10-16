@@ -1,6 +1,6 @@
 # Uploaded-Files-List
-Customer Uploaded Files - List and Download v 1.4
-Version Release Date: 9/26/2018
+Customer Uploaded Files - List and Download v 1.4.1
+Version Release Date: 10/16/2018
 Publisher: Zen4All
 Released for Zen Cart v1.5.5x
 
@@ -103,3 +103,8 @@ Dana Cartwright (ZC forums: decartwr, e-mail: zen@dobbytron.com)
 9/26/2018 Updated & Reformatted by Zen4All
              1. Updated code to be more conform Zen Cart standards
              2. Removed core code overrides
+
+10/16/2018 Bug fixes
+             1. add missing file
+             2. add missing global in uploads file
+             3. add language parameter to query, so files do not show multiple times in multilingual stores.
